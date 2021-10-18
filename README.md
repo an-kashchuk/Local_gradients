@@ -1,10 +1,10 @@
 # Local_gradients
 This package provides a set of tools for 3-D localisation of single particles in brightfield and fluorescent microscopy using local gradients.
-The package is provided in LabVIEW, Matlab and Python and have been tested to provide the same result (within the rounding errors). 
+The package is provided in LabVIEW, Matlab and Python and have been tested to provide the same result (within the rounding errors). Please, note that the calculated position of the particle in xy is defined accourding to the array indexing convenience in the specific language (i.e. the position from LabVIEW will be 1 pixel smaller than the result from Matlab for the same image)
 
 ## Usage
 
-For the usage of the package please see the examples provided for each language. Examples were preset to run on the images in [test_images](https://github.com/an-kashchuk/Local_gradients/tree/main/test_images) folder
+For the usage of the package please see the examples provided for each language. Examples were preset to run the images in [test_images](https://github.com/an-kashchuk/Local_gradients/tree/main/test_images) folder
 
 ### Matlab
 The easiest way to calculate the position of the particle is from xyz_express.m and xyz_fluor_express.m (for brightfield and fluorescent images correspondingly).
