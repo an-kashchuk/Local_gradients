@@ -36,4 +36,4 @@ scipy==1.4.1*
 
 ## License
 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
-If you use this package, please, cite us as:
+If you use this package, please, cite us as: TO BE ADDED
