@@ -1,3 +1,6 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5676290.svg)](https://doi.org/10.5281/zenodo.5676290)
+[![bioRxiv](http://img.shields.io/badge/BIORXIV-10.1101/2021.11.11.468294-B31B1B.svg)](https://doi.org/10.1101/2021.11.11.468294)
+
 # Local_gradients
 This package provides a set of tools for 3-D localisation of single particles in brightfield and fluorescent microscopy using local gradients.
 The package is provided in LabVIEW, Matlab and Python and have been tested to provide the same result (within the rounding errors). Please, note that the calculated position of the particle in xy is defined accourding to the array indexing convenience in the specific language (i.e. the position from LabVIEW will be 1 pixel smaller than the result from Matlab for the same image)
@@ -36,4 +39,7 @@ scipy==1.4.1*
 
 ## License
 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
-If you use this package, please, cite us as: TO BE ADDED
+
+If you use this package, please, cite us as: 
+
+> Kashchuk, Anatolii V., Oleksandr Perederiy, Chiara Caldini, Lucia Gardini, Francesco Saverio Pavone, Anatoliy M. Negriyko, and Marco Capitanio. “**Particle localization using local gradients and its application to nanometer stabilization of a microscope.**” Preprint. Biophysics, November 12, 2021. https://doi.org/10.1101/2021.11.11.468294.
