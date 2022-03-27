@@ -1,10 +1,10 @@
-function [zV,zVx,zVy] = z_value(Gx,Gy,cx,cy)
-%z_value calculates z-value for an image of a particle
+function [zV,zVx,zVy] = z_brt(Gx,Gy,cx,cy)
+%z_brt calculates z-value for an image of a particle in brightfield microscopy
 % z-value is calculated as the difference of sums of all local gradients in
 % the image of a particle splitted horizontally and vertically by the
 % center of the particle.
 % 
-% [zV,zVx,zVy] = z_value(Gx,Gy,cx,cy)
+% [zV,zVx,zVy] = z_brt(Gx,Gy,cx,cy)
 %   INPUT:
 %       Gx,Gy - horizontal and vertical local gradients
 %       cx,cy - x- and y-coordinates of the center of the particle

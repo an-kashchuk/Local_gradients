@@ -1,11 +1,12 @@
-function [x,y,z,Gthr] = xyz_fluor_express(Im,R,thrsize,angPos,varargin)
-%XYZ_FLUOR_EXPRESS calculates xyz positions of the particle from its image with a single function using local gradient method.
-% [x,y,z,Gthr] = xyz_express(Im,R,thrsize,PositiveAngle,thrtype)
+function [x,y,z,Gthr] = xyz_dh_express(Im,R,thrsize,mid_rng,varargin)
+%XYZ_DH_EXPRESS calculates xyz positions of the particle in astigmatism-based 
+% microscopy from its image with a single function using local gradient method.
+% [x,y,z,Gthr] = xyz_dh_express(Im,R,thrsize,mid_rng,thrtype)
 %   INPUT:
 %       Im - input image
 %       R - radius of the window (should be >0.5)
 %       thrsize - threshold value
-%       angPos - angle of the major axes (in degrees) of the spot 
+%       mid_rng - angle of the major axes (in degrees) of the spot 
 %                It is used to discriminate positive and negative displacement 
 %                of the particle from the in-focus position define positive 
 %                (should be measured from the positive direction of x-axis) 
@@ -44,5 +45,5 @@ y=cy+cR;
 
 %% Calculate Z value if requested
 if nargout>=3
-    z=LocalGradient.z_fluor(Gthr,Gx,Gy,cx,cy,angPos);
+    z=LocalGradient.z_dh(lsq_data{1},mid_rng);
 end

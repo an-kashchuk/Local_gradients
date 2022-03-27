@@ -8,7 +8,7 @@ clearvars
 
 %% Input parameters
 
-fname='../test_images/Fluorescent'; % path to multipage tif file
+fname='../test_images/Astigmatism'; % path to multipage tif file
 
 % Set local gradient parameters
 R=14; % set window size
@@ -61,10 +61,9 @@ for i=1:numimgs
     y(i)=cy+cR;
     
     % Calculate z-value
-    zV(i) = LocalGradient.z_fluor(Gthr,Gx,Gy,cx,cy,PositiveAngle);
+    zV(i) = LocalGradient.z_ast(Gthr,Gx,Gy,cx,cy,PositiveAngle);
 
     t(i)=toc;
-
 end
 
 %% Apply polynomial fit to z-value
@@ -85,4 +84,4 @@ figure(53), plot(xplot,t), grid minor, grid on,hold on
             
 %% Alternatevily, the position of the particle can be determined with a single express function
 % Express calculation (uncomment to use)
-% [x,y,z,Gthr]=LocalGradient.xyz_fluor_express(Im,R,thrsize,PositiveAngle,thrtype);
+% [x,y,z,Gthr]=LocalGradient.xyz_ast_express(Im,R,thrsize,PositiveAngle,thrtype);

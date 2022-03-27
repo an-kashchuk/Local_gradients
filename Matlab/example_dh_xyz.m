@@ -13,7 +13,7 @@ clearvars
 fname='../test_images/Double_helix'; % path to multipage tif file
 
 % Set local gradient parameters
-R=15; % set window size
+R=10; % set window size
 thrsize=1.7; % threshold value
 thrtype= 'topfraction'; % threshold type
 
@@ -85,4 +85,4 @@ figure(53), plot(xplot,t), grid minor, grid on,hold on
             
 %% Alternatevily, the position of the particle can be determined with a single express function
 % Express calculation (uncomment to use)
-% [x,y,z,Gthr]=LocalGradient.xyz_fluor_express(Im,R,thrsize,PositiveAngle,thrtype);
+% [x,y,z,Gthr]=LocalGradient.xyz_dh_express(Im,R,thrsize,PositiveAngle,thrtype);

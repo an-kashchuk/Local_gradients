@@ -61,9 +61,9 @@ disp(['x = ' num2str(x)])
 disp(['y = ' num2str(y)])
 
 %% Calculate Z value
-z=LocalGradient.z_value(Gx,Gy,cx,cy);
+z=LocalGradient.z_brt(Gx,Gy,cx,cy);
 disp(['z = ' num2str(z)])
 
 %% Alternatevily, the position of the particle can be determined with a single express function
 % Express calculation (uncomment to use)
-% [x,y,z,Gthr]=LocalGradient.xyz_express(Im,R,thrsize,thrtype);
+% [x,y,z,Gthr]=LocalGradient.xyz_brt_express(Im,R,thrsize,thrtype);
