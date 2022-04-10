@@ -30,7 +30,7 @@ z0=180; % first image position
 numimgs = 36;
 
 % Get image size
-ImI=imfinfo(fullfile( fname,'z_dh_1.png'));
+ImI=imfinfo(fullfile( fname,'z_dh_001.png'));
 imsize = [ImI.Height, ImI.Width];
 
 % Precalculate matrices for local gradient calculations
@@ -45,7 +45,7 @@ y=zeros(numimgs,1);
 % Go through all the images
 for i=1:numimgs
     % Read image
-    Im=double( imread( fullfile( fname,['z_dh_' num2str(i) '.png'] ) ) );
+    Im=double( imread( fullfile( fname,['z_dh_' num2str(i,'%.3d') '.png'] ) ) );
     figure(10),imshow(Im,[])
     
     tic

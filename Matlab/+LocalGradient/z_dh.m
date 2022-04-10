@@ -4,6 +4,8 @@ function zV = z_dh(pnts,mid_rng)
 %       pnts - coordinates of points in the image (2-column vector)
 %       mid_rng - indication of mid-range angle of rotation [-180..180]
 % 
+%   Finds the orientation of the image using moments of the image
+% 
 % Author: Anatolii Kashchuk
 
 x=pnts(:,1);
