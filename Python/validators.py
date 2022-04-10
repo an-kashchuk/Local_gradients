@@ -6,7 +6,7 @@ Authors: Oleksandr Perederii, Anatolii Kashchuk
 
 import os
 from exceptions import BaseParticleException, FilenameError, ThrtypeError, ThrError, RError, RoiError, \
-    PosAngleError, DzError, ZError
+    PosAngleError, DzError, ZError, MidRndError
 
 class BaseValidator:
 
@@ -99,6 +99,17 @@ class ZValidator(BaseValidator):
             raise ZError(f"z must be int, got {str(type(value))}")
 
 
+class MidRndValidator(BaseValidator):
+
+    @staticmethod
+    def validate(value):
+        if (not isinstance(value, int)):
+            raise MidRndError(f"mid_rng must be int, got {str(type(value))}")
+
+        if (value > 180) or (value < -180):
+            raise MidRndError(f"mid_rng must be in range [-180..180]")
+
+
 validators = {
     "filename": FilenameValidator,
     "thrtype": ThrtypeValidator,
@@ -107,7 +118,8 @@ validators = {
     "roi": RoiValidator,
     "positiveAngle": PosAngleValidator,
     "dz": DzValidator,
-    "z0": ZValidator
+    "z0": ZValidator,
+    "mid_rng": MidRndValidator
 }
 
 def validate(f):

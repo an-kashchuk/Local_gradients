@@ -32,3 +32,6 @@ class DzError(BaseParticleException):
 
 class ZError(BaseParticleException):
     pass
+
+class MidRndError(BaseParticleException):
+    pass

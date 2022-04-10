@@ -126,7 +126,7 @@ def local_gradient(
     img_x, img_y = img.shape
     cR = math.ceil(R - 0.5)
     outsz = np.array([[2 * cR + 1, img_x], [2 * cR + 1, img_y]])
-    img = img + 1  # avoide division by zero
+    img = img + 1  # avoid division by zero
 
     im_fft = fft2(img, s=(outsz[0, 0] + outsz[0, 1], outsz[1, 0] + outsz[1, 1]))
     # sum of all pixels in the area
@@ -197,7 +197,7 @@ def lstsqr_lines(p1: np.ndarray, p2: np.ndarray, w: np.ndarray) -> Tuple[np.ndar
     return c_x_y, P, dR
 
 
-def z_value(g_x: np.ndarray, g_y: np.ndarray, c_x_y: np.ndarray) -> float:
+def z_brt(g_x: np.ndarray, g_y: np.ndarray, c_x_y: np.ndarray) -> float:
     """
 
            CALCULATE Z COORDINATE OF THE PARTICLE
@@ -233,7 +233,7 @@ def z_value(g_x: np.ndarray, g_y: np.ndarray, c_x_y: np.ndarray) -> float:
         print("to get z coordinate value, please choose smaller value for R")
 
 
-def z_fluor(g_thr: np.ndarray, g_x: np.ndarray, g_y: np.ndarray, c_x_y: np.ndarray, positiveAngle: int) -> float:
+def z_ast(g_thr: np.ndarray, g_x: np.ndarray, g_y: np.ndarray, c_x_y: np.ndarray, positiveAngle: int) -> float:
     """
 
            CALCULATE Z COORDINATE OF THE FLUORESCENT PARTICLE
@@ -263,7 +263,7 @@ def z_fluor(g_thr: np.ndarray, g_x: np.ndarray, g_y: np.ndarray, c_x_y: np.ndarr
     g_size = g_thr.shape
 
     # X horizontal split
-    ccol = math.ceil(c_x_y[0] - 0.5)   # find central column
+    ccol = math.ceil(c_x_y[0] - 0.5)  # find central column
     # find fractions of a pixel for central column
     frxL = c_x_y[0] - (ccol - 0.5)
     frxR = 1 - frxL
@@ -274,8 +274,8 @@ def z_fluor(g_thr: np.ndarray, g_x: np.ndarray, g_y: np.ndarray, c_x_y: np.ndarr
     g_thr_left[:, ccol - 1] = g_thr_left[:, ccol - 1] * frxL
 
     # Y vertical split
-    crow = math.ceil(c_x_y[1] - 0.5)   # find central row
-    frxT = c_x_y[1] - (crow - 0.5)     # find fractions of a pixel for central row
+    crow = math.ceil(c_x_y[1] - 0.5)  # find central row
+    frxT = c_x_y[1] - (crow - 0.5)  # find fractions of a pixel for central row
     frxB = 1 - frxT
     # create vertically splitted parts of the local gradient image
     g_thr_bottom = g_thr * np.pad(np.ones((g_size[0] - crow + 1, g_size[1])), [(crow - 1, 0), (0, 0)], mode='constant')
@@ -311,12 +311,57 @@ def z_fluor(g_thr: np.ndarray, g_x: np.ndarray, g_y: np.ndarray, c_x_y: np.ndarr
     AxMNR = min(ax1d, ax2d)
 
     p1 = np.rad2deg(np.sin(2 * positiveAngle)) * (h_x[0] - h_x[2]) + np.rad2deg(np.cos(2 * positiveAngle)) * (
-                h_y[0] - h_y[2])
+            h_y[0] - h_y[2])
     p2 = np.rad2deg(np.sin(2 * (positiveAngle + 90))) * (h_y[3] - h_y[1]) - np.rad2deg(
         np.cos(2 * (positiveAngle + 90))) * (h_x[3] - h_x[1])
     focus_sign = np.sign(p1 + p2)
     zV = focus_sign * AxMJR
     return zV
+
+
+def z_dh(pnts: np.ndarray, mid_rng: int) -> float:
+    """
+
+           CALCULATE Z COORDINATE OF THE FLUORESCENT PARTICLE IN DOUBLE-HELIX-BASED MICROSCOPY
+    :param pnts: 2d numpy array; coordinates of points in the image (2-column vector)
+    :param mid_rng: int; indication of mid-range angle of rotation [-180..180]
+
+    :return: theta; z-value, float;
+
+    Finds the orientation of the image using moments of the image
+    """
+
+    x = pnts[:, 1]
+    y = -pnts[:, 0]
+
+    # Calculate moments
+    M00 = np.size(x)
+    M10 = np.sum(x)
+    M01 = np.sum(y)
+    M11 = np.sum(x * y)
+    M20 = np.sum(x ** 2)
+    M02 = np.sum(y ** 2)
+
+    # Find center
+    cx = M10 / M00
+    cy = M01 / M00
+
+    # Calculate central moments
+    u11 = M11 / M00 - cx * cy
+    u20 = M20 / M00 - cx ** 2
+    u02 = M02 / M00 - cy ** 2
+
+    # Calculate the angle
+    theta = 0.5 * np.arctan2(2 * u11, (u20 - u02)) * 180 / np.pi
+
+    # Correct angle to the specified range
+    fromRng = mid_rng - 90
+    toRng = mid_rng + 90
+    if theta < fromRng:
+        theta = theta + 180
+    elif theta > toRng:
+        theta = theta - 180
+    return theta
 
 
 def get_position_brightfield(
@@ -367,12 +412,12 @@ def get_position_brightfield(
         plt.show()
 
     if z_pos:
-        z = z_value(g_x, g_y, c_x_y)
+        z = z_brt(g_x, g_y, c_x_y)
         return c_x_y[0] + abs(R), c_x_y[1] + abs(R), z
     return c_x_y[0] + abs(R), c_x_y[1] + abs(R), 0.0
 
 
-def get_position_fluorescent(
+def get_position_astigmatism(
         img_arr: np.ndarray,
         thrtype: str,
         thr: float,
@@ -414,7 +459,55 @@ def get_position_fluorescent(
     cR = math.ceil(R - 0.5)
     if z_pos:
         # calculate z-value
-        z = z_fluor(g_thr, g_x, g_y, c_x_y, positiveAngle)
+        z = z_ast(g_thr, g_x, g_y, c_x_y, positiveAngle)
+        return c_x_y[0] + cR, c_x_y[1] + cR, z
+
+    return c_x_y[0] + cR, c_x_y[1] + cR, 0.0
+
+
+def get_position_doublehelix(
+        img_arr: np.ndarray,
+        thrtype: str,
+        thr: float,
+        R: float,
+        mid_rng: int,
+        G: tuple = None,
+        roi: list = None,
+        z_pos: bool = True
+) -> Tuple[float, float, float]:
+    """
+    :param img_arr: np.ndarray; 2d image array
+    :param thrtype: string; 'topfraction' or 'topvalue'
+    :param thr: non-negative float; threshold level
+    :param R: float > 0.5; radius of window filter
+    :param mid_rng: int; indication of mid-range angle of rotation [-180..180] (measured from positive x axis in
+           counter-clockwise direction)
+    :param G: None by default or tuple with 3 already precalculated 2d numpy.ndarrays - 2D fourier transform matrices for
+              calculation of horizontal, vertical gradients and sum of pixels correspondingly
+    :param roi: None by default or list with ints of length 4; region of interest to select an individual fluorophore
+                from the image, should be greater than zero and less than corresponding image size
+    :param z_pos: bool; whether to calculate z position; True by default
+    :return: x, y, z: tuple with 3 floats; x, y, z coordinates of fluorescent particles
+    """
+    if roi == None:
+        roi[0], roi[2] = 1, 1
+        roi[1], roi[3] = img_arr.shape[0], img_arr.shape[1]
+    if G:
+        gMatxfft, gMatyfft, sMatfft = G
+    else:
+        # Precalculate matrices for local gradient calculations
+        gMatxfft, gMatyfft, sMatfft = local_gradient_alloc(img_sz=(roi[1] - roi[0] + 1, roi[3] - roi[2] + 1), R=abs(R))
+
+    im_analyze = img_arr[roi[0] - 1: roi[1], roi[2] - 1: roi[3]]  # apply region of interest
+    # calculate local gradients images
+    g, g_x, g_y, g_thr, g_mask, lsq_data = local_gradient(im_analyze, abs(R), gMatxfft, gMatyfft, sMatfft, thrtype, thr)
+    # find center of symmetry of the particle
+    c_x_y, P, dR = lstsqr_lines(lsq_data[0], lsq_data[1], lsq_data[2])
+    # correct determined positiones for the reduction in the image size
+    cR = math.ceil(R - 0.5)
+    if z_pos:
+        # calculate z-value
+        z = z_dh(lsq_data[0], mid_rng)
         return c_x_y[0] + cR, c_x_y[1] + cR, z
 
     return c_x_y[0] + cR, c_x_y[1] + cR, 0.0
