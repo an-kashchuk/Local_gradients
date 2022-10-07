@@ -1,6 +1,7 @@
 """
 
 Authors: Oleksandr Perederii, Anatolii Kashchuk
+2022
 """
 
 class BaseParticleException(Exception):
@@ -34,4 +35,10 @@ class ZError(BaseParticleException):
     pass
 
 class MidRndError(BaseParticleException):
+    pass
+
+class EpsilonError(BaseParticleException):
+    pass
+
+class MinptsError(BaseParticleException):
     pass

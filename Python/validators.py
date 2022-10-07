@@ -2,11 +2,12 @@
 Validation classes guaranteeing the launch of the program only with acceptable values and types of parameters
 
 Authors: Oleksandr Perederii, Anatolii Kashchuk
+2022
 """
 
 import os
 from exceptions import BaseParticleException, FilenameError, ThrtypeError, ThrError, RError, RoiError, \
-    PosAngleError, DzError, ZError, MidRndError
+    PosAngleError, DzError, ZError, MidRndError, EpsilonError, MinptsError
 
 class BaseValidator:
 
@@ -110,6 +111,28 @@ class MidRndValidator(BaseValidator):
             raise MidRndError(f"mid_rng must be in range [-180..180]")
 
 
+class EpsilonValidator(BaseValidator):
+
+    @staticmethod
+    def validate(value):
+        if (not isinstance(value, float)) and (not isinstance(value, int)):
+            raise EpsilonError(f"epsilon must be float or int. Got {str(type(value))}")
+
+        if value <= 0:
+            raise EpsilonError(f"epsilon must be more positive, got {value}")
+
+
+class MinptsValidator(BaseValidator):
+
+    @staticmethod
+    def validate(value):
+        if not isinstance(value, int):
+            raise MinptsError(f"minpts must be int. Got {str(type(value))}")
+
+        if value <= 0:
+            raise MinptsError(f"minpts must be more positive, got {value}")
+
+
 validators = {
     "filename": FilenameValidator,
     "thrtype": ThrtypeValidator,
@@ -119,7 +142,9 @@ validators = {
     "positiveAngle": PosAngleValidator,
     "dz": DzValidator,
     "z0": ZValidator,
-    "mid_rng": MidRndValidator
+    "mid_rng": MidRndValidator,
+    "epsilon": EpsilonValidator,
+    "minpts": MinptsValidator
 }
 
 def validate(f):

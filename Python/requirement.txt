@@ -1,6 +1,7 @@
-PIL==7.1.2
-cv2==4.1.2
-matplotlib==3.2.2
-numpy==1.19.5
-plotly==4.4.1
-scipy==1.4.1
+PIL==9.1.0
+cv2==4.5.5
+matplotlib==3.5.1
+numpy==1.22.3
+plotly==5.7.0
+scipy==1.8.0
+scikit-learn==1.1.2

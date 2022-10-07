@@ -2,23 +2,18 @@
 Here are implemented all the main functions of the local gradient method
 
 Authors: Oleksandr Perederii, Anatolii Kashchuk
+2022
 """
 
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
+from sklearn.cluster import DBSCAN
 from scipy.fft import fft2, ifft2
 from scipy.linalg import lstsq
-from scipy.io import loadmat
-from scipy import stats
 import numpy as np
 import math
-import cv2
-import os
-import PIL
 
 from typing import Tuple
+
 
 
 def disk_filter(fltSz: float) -> np.ndarray:
@@ -374,6 +369,8 @@ def get_position_brightfield(
         draw: bool = False
 ) -> Tuple[float, float, float]:
     """
+
+            CALCULATE X, Y, Z COORDINATEs OF THE PARTICLE IN BRIGHTFIELD MICROSCOPY
     :param img_arr: np.ndarray; 2d image array
     :param thrtype: string; 'topfraction' or 'topvalue'
     :param thr: non-negative float; threshold level
@@ -422,12 +419,14 @@ def get_position_astigmatism(
         thrtype: str,
         thr: float,
         R: float,
-        positiveAngle: int,
         G: tuple = None,
         roi: list = None,
-        z_pos: bool = True
+        z_pos: bool = True,
+        positiveAngle: int = 90
 ) -> Tuple[float, float, float]:
     """
+
+            CALCULATE X, Y, Z COORDINATEs OF THE FLUORESCENT PARTICLE IN FLURESCENT MICROSCOPE
     :param img_arr: np.ndarray; 2d image array
     :param thrtype: string; 'topfraction' or 'topvalue'
     :param thr: non-negative float; threshold level
@@ -470,23 +469,25 @@ def get_position_doublehelix(
         thrtype: str,
         thr: float,
         R: float,
-        mid_rng: int,
         G: tuple = None,
         roi: list = None,
-        z_pos: bool = True
+        z_pos: bool = True,
+        mid_rng: int = 91
 ) -> Tuple[float, float, float]:
     """
+
+            CALCULATE X, Y, Z COORDINATEs OF THE FLUORESCENT PARTICLE IN DOUBLE-HELIX-BASED MICROSCOPY
     :param img_arr: np.ndarray; 2d image array
     :param thrtype: string; 'topfraction' or 'topvalue'
     :param thr: non-negative float; threshold level
     :param R: float > 0.5; radius of window filter
-    :param mid_rng: int; indication of mid-range angle of rotation [-180..180] (measured from positive x axis in
-           counter-clockwise direction)
     :param G: None by default or tuple with 3 already precalculated 2d numpy.ndarrays - 2D fourier transform matrices for
               calculation of horizontal, vertical gradients and sum of pixels correspondingly
     :param roi: None by default or list with ints of length 4; region of interest to select an individual fluorophore
                 from the image, should be greater than zero and less than corresponding image size
     :param z_pos: bool; whether to calculate z position; True by default
+    :param mid_rng: int; indication of mid-range angle of rotation [-180..180] (measured from positive x axis in
+           counter-clockwise direction)
     :return: x, y, z: tuple with 3 floats; x, y, z coordinates of fluorescent particles
     """
     if roi == None:
@@ -511,3 +512,142 @@ def get_position_doublehelix(
         return c_x_y[0] + cR, c_x_y[1] + cR, z
 
     return c_x_y[0] + cR, c_x_y[1] + cR, 0.0
+
+
+def local_gradient_multi(
+        img: np.ndarray,
+        R: float,
+        epsilon: float,
+        minpts: int,
+        thrtype: str,
+        thr: float,
+        G: tuple = None
+) -> np.ndarray:
+    """
+
+           CALCULATES z-value FOR A FLUORESCENT PARTICLE IN ASTIGMATISM-BASED MICROSCOPY
+    :param img: 2d numpy array
+    :param R: float > 0.5; radius of window filter
+    :param epsilon: float > 0; neighborhood search radius: The maximum distance between two samples for one to be
+                    considered as in the neighborhood of the other (DBSCAN)
+    :param minpts: int > 0; minimum number of neighbors minpts required to identify a core point
+    :param thrtype: string; 'topfraction' or 'topvalue'; type of threshold to apply
+    :param thr: non-negative float; threshold value
+    :param G: None by default or tuple with 3 already precalculated 2d numpy.ndarrays - 2D fourier transform matrices for
+              calculation of horizontal, vertical gradients and sum of pixels correspondingly
+    :return: coord; numpy array; shape=(number_of_clusters, 2); array contains the coordinates of all particles in the
+                    image
+
+    """
+    if G:
+        gMatxfft, gMatyfft, sMatfft = G
+    else:
+        gMatxfft, gMatyfft, sMatfft = local_gradient_alloc(img_sz=img.shape, R=abs(R))
+
+    # calculate local gradients images
+    g, _, _, _, g_mask, lsq_data = local_gradient(img, abs(R), gMatxfft, gMatyfft, sMatfft, thrtype, thr)
+
+    # cluster data
+    x_y_coord = lsq_data[0]
+    idx = DBSCAN(eps=epsilon, min_samples=minpts).fit_predict(x_y_coord)                     # get labels for each point
+    n_clusters_ = max(idx) + 1                                                 # len(set(idx)) - (1 if -1 in idx else 0)
+    coord = np.zeros((n_clusters_, 2))
+
+    # go through all detected clusters
+    for i in range(n_clusters_):
+        c_x_y, _, _ = lstsqr_lines(lsq_data[0][idx == i, :], lsq_data[1][idx == i, :], lsq_data[2][:, idx == i, :])
+        coord[i, :] = c_x_y
+    cR = math.ceil(R - 0.5)
+
+    idx = np.argsort(coord[:, 0])                                                             # sort by first coordinate
+    coord = coord[idx, :]
+    return coord + cR
+
+
+def detect_trj(
+        c_arr: np.ndarray,
+        dc: int,
+        dfr: int,
+        Nfr_min: int
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+
+            LINKS POSITION DATA INTO TRAJECTORIES
+    :param c_arr: 3d numpy array; shape=(N=index_of_frame, n=index_of_particle, 2); N frames, each containing x-y
+                  coordinates of n particles
+    :param dc: int > 0; maximum distance from the detected particle to look for linked particles in other frames
+    :param dfr: int > 0; number of frames to look for linked particles
+    :param Nfr_min: int > 0; minimum number of frames in trajectory
+    :return:
+            t_trj_ids:
+            t_frames:
+            t_xy: 3d numpy array; shape=(N=index_of_frame, n=index_of_particle, 2=xy coordinate);
+            t_trj_num:
+    """
+    num_of_frames = c_arr.shape[0]
+    trj_num = c_arr.shape[1]
+
+    t_ids = np.empty((num_of_frames, trj_num), dtype=int)
+    t_frames = np.empty((num_of_frames, trj_num), dtype=int)
+
+    t_ids[0, :] = np.arange(trj_num)
+    t_frames[0, :] = np.ones((trj_num))
+
+    for frame in range(1, num_of_frames):
+        for particle in range(trj_num):
+            for k in range(1, dfr + 1):
+                if frame + 1 - k <= 0:
+                    trj_num += 1
+                    t_ids[frame, particle] = trj_num
+                    break
+                # find minimum distance and index of the closest particle
+                arr = np.sqrt(np.sum((c_arr[frame, particle, :] - c_arr[frame - k, :, :]) ** 2, axis=1))
+                m = np.min(arr)
+                ind = np.argmin(arr)
+
+                if m <= dc:
+                    # if within a specified distance - mark current particle as a part of trajectory
+                    mtx_temp = t_ids[frame - k, ind]
+                    t_ids[frame, particle] = mtx_temp
+                    break
+                else:
+                    # if all frames checked and no particles is close enough, create new trajectory id
+                    if k == dfr:
+                        trj_num += 1
+                        t_ids[frame, particle] = trj_num
+        t_frames[frame, :] = frame * np.ones(particle + 1)
+
+    # trajectory ids for all detected points
+    trj_ids = np.sort(np.concatenate(t_ids, axis=0), axis=0)                      # (num_of_frames * num_of_particles, )
+
+    # number of frames for each trajectory
+    n_frames = np.diff(
+        (np.diff(
+            np.concatenate((np.array([-1]), trj_ids, np.array([trj_num])), axis=0),
+            axis=0
+        ) != 0).nonzero()[0]
+    )
+
+    # filter trajectories by frame number
+    trj_filt = (n_frames >= Nfr_min).nonzero()[0]
+    num_of_trj = trj_filt.shape[0]
+
+    t_ext_ids = np.concatenate(t_ids, axis=0)                                     # (num_of_frames * num_of_particles, )
+    t_ext_frames = np.concatenate(t_frames, axis=0)                               # (num_of_frames * num_of_particles, )
+    t_ext_xy = np.concatenate(c_arr, axis=0)                                     # (num_of_frames * num_of_particles, 2)
+
+    t_trj_ids, t_frames, t_xy = None, None, None
+    t_trj_num = np.empty((num_of_trj))
+
+    for p, t in enumerate(trj_filt):
+        mask = t_ext_ids == t
+        if p == 0:
+            t_trj_ids = t_ext_ids[mask]
+            t_frames = t_ext_frames[mask]
+            t_xy = t_ext_xy[mask][..., np.newaxis]
+        else:
+            t_trj_ids = np.vstack((t_trj_ids, t_ext_ids[mask]))
+            t_frames = np.vstack((t_frames, t_ext_frames[mask]))
+            t_xy = np.concatenate((t_xy, t_ext_xy[mask][..., np.newaxis]), axis=2)
+        t_trj_num[p] = t
+    return t_trj_ids, t_frames, t_xy, t_trj_num
