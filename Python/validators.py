@@ -7,7 +7,7 @@ Authors: Oleksandr Perederii, Anatolii Kashchuk
 
 import os
 from exceptions import BaseParticleException, FilenameError, ThrtypeError, ThrError, RError, RoiError, \
-    PosAngleError, DzError, ZError, MidRndError, EpsilonError, MinptsError
+    PosAngleError, DzError, ZError, MidRndError, EpsilonError, MinptsError, DcError, DfrError, NfrMinError
 
 class BaseValidator:
 
@@ -57,7 +57,7 @@ class RValidator(BaseValidator):
             raise RError(f"R must be float or int. Got {str(type(value))}")
 
         if value <= 0:
-            raise RError(f"R must be more positive, got {value}")
+            raise RError(f"R must be positive, got {value}")
 
 
 class RoiValidator(BaseValidator):
@@ -78,7 +78,7 @@ class PosAngleValidator(BaseValidator):
             raise PosAngleError(f"positiveAngle must be int, got {str(type(value))}")
 
         if value < 0:
-            raise PosAngleError(f"positiveAngle must be more positive, got {value}")
+            raise PosAngleError(f"positiveAngle must be positive, got {value}")
 
 
 class DzValidator(BaseValidator):
@@ -89,7 +89,7 @@ class DzValidator(BaseValidator):
             raise DzError(f"dz must be float, got {str(type(value))}")
 
         if value <= 0:
-            raise DzError(f"dz must be more positive, got {value}")
+            raise DzError(f"dz must be positive, got {value}")
 
 
 class ZValidator(BaseValidator):
@@ -119,7 +119,7 @@ class EpsilonValidator(BaseValidator):
             raise EpsilonError(f"epsilon must be float or int. Got {str(type(value))}")
 
         if value <= 0:
-            raise EpsilonError(f"epsilon must be more positive, got {value}")
+            raise EpsilonError(f"epsilon must be positive, got {value}")
 
 
 class MinptsValidator(BaseValidator):
@@ -130,7 +130,40 @@ class MinptsValidator(BaseValidator):
             raise MinptsError(f"minpts must be int. Got {str(type(value))}")
 
         if value <= 0:
-            raise MinptsError(f"minpts must be more positive, got {value}")
+            raise MinptsError(f"minpts must be positive, got {value}")
+
+
+class DcValidator(BaseValidator):
+
+    @staticmethod
+    def validate(value):
+        if not isinstance(value, int):
+            raise DcError(f"dc must be int. Got {str(type(value))}")
+
+        if value <= 0:
+            raise DcError(f"dc must be positive, got {value}")
+
+
+class DfrValidator(BaseValidator):
+
+    @staticmethod
+    def validate(value):
+        if not isinstance(value, int):
+            raise DfrError(f"dfr must be int. Got {str(type(value))}")
+
+        if value <= 0:
+            raise DfrError(f"dfr must be positive, got {value}")
+
+
+class NfrMinValidator(BaseValidator):
+
+    @staticmethod
+    def validate(value):
+        if not isinstance(value, int):
+            raise NfrMinError(f"Nfr_min must be int. Got {str(type(value))}")
+
+        if value <= 0:
+            raise NfrMinError(f"Nfr_min must be positive, got {value}")
 
 
 validators = {
@@ -144,7 +177,12 @@ validators = {
     "z0": ZValidator,
     "mid_rng": MidRndValidator,
     "epsilon": EpsilonValidator,
-    "minpts": MinptsValidator
+    "minpts": MinptsValidator,
+    "dc": DcValidator,
+    "dfr": DfrValidator,
+    "Nfr_min": NfrMinValidator
+
+
 }
 
 def validate(f):

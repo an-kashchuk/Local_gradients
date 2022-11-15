@@ -356,6 +356,9 @@ class ParticleDetector:
             R: float,
             epsilon: float,
             minpts: int,
+            dc: int,
+            dfr: int,
+            Nfr_min: int,
             draw_traject: bool = True
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -368,6 +371,9 @@ class ParticleDetector:
         :param epsilon: float > 0; neighborhood search radius: The maximum distance between two samples for one to be
                         considered as in the neighborhood of the other (DBSCAN)
         :param minpts: int > 0; minimum number of neighbors minpts required to identify a core point
+        :param dc: int > 0; maximum distance from the detected particle to look for linked particles in other frames
+        :param dfr: int > 0; number of frames to look for linked particles
+        :param Nfr_min: int > 0; minimum number of frames in trajectory
         :param draw_traject: bool
         :return: np.ndarray-S; trj_id, frames, xy, trj_num; shapes: (num_of_trajectories, num_of frames),
                  (num_of_trajectories, num_of frames), (num_of_trajectories, num_of frames, 2), (num_of_trajectories, )
@@ -379,7 +385,7 @@ class ParticleDetector:
             local_gradient_multi, R=R, epsilon=epsilon, minpts=minpts, thrtype=thrtype, thr=thr
         )
         coord = cls._parallel(lgm_partial)(img_lst)
-        trj_id, frames, xy, trj_num = detect_trj(coord, dc=10, dfr=4, Nfr_min=10)
+        trj_id, frames, xy, trj_num = detect_trj(coord, dc=dc, dfr=dfr, Nfr_min=Nfr_min)
 
         if draw_traject:
             cls._draw_trajectory(xy, fst_im)

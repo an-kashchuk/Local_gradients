@@ -42,3 +42,12 @@ class EpsilonError(BaseParticleException):
 
 class MinptsError(BaseParticleException):
     pass
+
+class DcError(BaseParticleException):
+    pass
+
+class DfrError(BaseParticleException):
+    pass
+
+class NfrMinError(BaseParticleException):
+    pass

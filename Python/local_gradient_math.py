@@ -585,20 +585,21 @@ def detect_trj(
             t_trj_num:
     """
     num_of_frames = c_arr.shape[0]
+    num_of_particles = c_arr.shape[1]
     trj_num = c_arr.shape[1]
 
-    t_ids = np.empty((num_of_frames, trj_num), dtype=int)
-    t_frames = np.empty((num_of_frames, trj_num), dtype=int)
+    t_ids = np.empty((num_of_frames, num_of_particles), dtype=int)
+    t_frames = np.empty((num_of_frames, num_of_particles), dtype=int)
 
-    t_ids[0, :] = np.arange(trj_num)
-    t_frames[0, :] = np.ones((trj_num))
+    t_ids[0, :] = np.arange(num_of_particles)
+    t_frames[0, :] = np.zeros((num_of_particles))
 
     for frame in range(1, num_of_frames):
-        for particle in range(trj_num):
+        for particle in range(num_of_particles):
             for k in range(1, dfr + 1):
                 if frame + 1 - k <= 0:
                     trj_num += 1
-                    t_ids[frame, particle] = trj_num
+                    t_ids[frame, particle] = trj_num - 1
                     break
                 # find minimum distance and index of the closest particle
                 arr = np.sqrt(np.sum((c_arr[frame, particle, :] - c_arr[frame - k, :, :]) ** 2, axis=1))
@@ -614,7 +615,7 @@ def detect_trj(
                     # if all frames checked and no particles is close enough, create new trajectory id
                     if k == dfr:
                         trj_num += 1
-                        t_ids[frame, particle] = trj_num
+                        t_ids[frame, particle] = trj_num - 1
         t_frames[frame, :] = frame * np.ones(particle + 1)
 
     # trajectory ids for all detected points

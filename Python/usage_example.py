@@ -92,6 +92,9 @@ if __name__ == "__main__":
         R=3.,
         epsilon=3,
         minpts=10,
+        dc=10,
+        dfr=4,
+        Nfr_min=10,
         draw_traject=True
     )
     print("x coordinates of particles coordinates on a series of successive frames: ", xy[:, :, 0])
