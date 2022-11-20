@@ -573,6 +573,7 @@ def detect_trj(
     """
 
             LINKS POSITION DATA INTO TRAJECTORIES
+
     :param c_arr: 3d numpy array; shape=(N=index_of_frame, n=index_of_particle, 2); N frames, each containing x-y
                   coordinates of n particles
     :param dc: int > 0; maximum distance from the detected particle to look for linked particles in other frames
@@ -617,6 +618,174 @@ def detect_trj(
                         trj_num += 1
                         t_ids[frame, particle] = trj_num - 1
         t_frames[frame, :] = frame * np.ones(particle + 1)
+
+    # trajectory ids for all detected points
+    trj_ids = np.sort(np.concatenate(t_ids, axis=0), axis=0)                      # (num_of_frames * num_of_particles, )
+
+    # number of frames for each trajectory
+    n_frames = np.diff(
+        (np.diff(
+            np.concatenate((np.array([-1]), trj_ids, np.array([trj_num])), axis=0),
+            axis=0
+        ) != 0).nonzero()[0]
+    )
+
+    # filter trajectories by frame number
+    trj_filt = (n_frames >= Nfr_min).nonzero()[0]
+    num_of_trj = trj_filt.shape[0]
+
+    t_ext_ids = np.concatenate(t_ids, axis=0)                                     # (num_of_frames * num_of_particles, )
+    t_ext_frames = np.concatenate(t_frames, axis=0)                               # (num_of_frames * num_of_particles, )
+    t_ext_xy = np.concatenate(c_arr, axis=0)                                     # (num_of_frames * num_of_particles, 2)
+
+    t_trj_ids, t_frames, t_xy = None, None, None
+    t_trj_num = np.empty((num_of_trj))
+
+    for p, t in enumerate(trj_filt):
+        mask = t_ext_ids == t
+        if p == 0:
+            t_trj_ids = t_ext_ids[mask]
+            t_frames = t_ext_frames[mask]
+            t_xy = t_ext_xy[mask][..., np.newaxis]
+        else:
+            t_trj_ids = np.vstack((t_trj_ids, t_ext_ids[mask]))
+            t_frames = np.vstack((t_frames, t_ext_frames[mask]))
+            t_xy = np.concatenate((t_xy, t_ext_xy[mask][..., np.newaxis]), axis=2)
+        t_trj_num[p] = t
+    return t_trj_ids, t_frames, t_xy, t_trj_num
+
+
+def _precalc_minV_indV(
+        minV: np.ndarray,
+        indV: np.ndarray,
+        c_arr: np.ndarray,
+        k: int,
+        dc: int,
+        dfr: int,
+        nonzero_ids: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+
+            PRECALCULATION OF minV AND indV MATRICES
+
+    :param minV: 3d np.ndarray of floats; shape:(number of frames, number of particles, dfr)
+    :param indV: 3d np.ndarray of ints; shape:(number of frames, number of particles, dfr)
+    :param c_arr: 3d np.ndarray of floats; shape: (num_of_frames, num_of_particles, 2)
+    :param k: int > 0; integer in range(1, dfr + 1)
+    :param dc: int > 0; maximum distance from the detected particle to look for linked particles in other frames
+    :param dfr: int > 0; number of frames to look for linked particles
+    :param nonzero_ids: 2d np.ndarray of bool values; shape:(number of frames, number of particles)
+                 True value indicates that for a specific (i, j) minV[i, j, :k] array contains
+                 all zeros. False - array contains a nonzero value c equal to -1 or > 0
+    :return:
+            minV, indV: np.ndarray of floats, np.ndarray of ints; shape:(number of frames, number of particles, dfr)
+    """
+    # if sum of abs values of minV array along last dimension gives nonzero matrix
+    if np.all(nonzero_ids == False) or k > dfr:
+        return minV, indV
+    m1 = c_arr[:, :, np.newaxis, :]
+    m2 = c_arr[:, np.newaxis, :, :]
+
+    diff = np.subtract(
+        m1[k:, ...],
+        m2[:-k, ...],
+        where=np.repeat(nonzero_ids[:, :, np.newaxis], 2, axis=2)[:, :, np.newaxis, :]
+    )                                                # get difference only for minV[..., :k] elements that ara all zeros
+
+    diff_sum = np.sqrt(np.sum(diff ** 2, axis=3))
+    m = np.min(diff_sum, axis=2)
+    e = m <= dc                                                              # fill minV and indV arrays only if m <= dc
+    ij = np.argwhere(np.logical_and(nonzero_ids == True, e))                                   # and nonzero_ids == True
+    minV[ij[:, 0] + k, ij[:, 1], k - 1] = m[ij[:, 0], ij[:, 1]]
+    indV[ij[:, 0] + k, ij[:, 1], k - 1] = np.argmin(diff_sum, axis=2)[ij[:, 0], ij[:, 1]]
+    # recalculate nonzero_ids for function recursive call with incremented k
+    new_nonzero_ids = np.sum(abs(minV[k + 1:, :, :k]), axis=2) == 0
+    return _precalc_minV_indV(minV, indV, c_arr, k + 1, dc, dfr, new_nonzero_ids)
+
+
+def _first_nonzero(
+        arr: np.ndarray,
+        axis: int,
+        invalid_val: int = -1
+) -> np.ndarray:
+    """
+
+          FIND INDICES OF FIRST NON-ZERO ELEMENT ALONG AXIS
+
+    arr: np.ndarray
+    axis: int
+    invalid_val: int, float; the value that will contain the result matrix if all the elements along axis are zeros
+
+    return:
+            np.ndarray with indices of first nonzero element of array arr along axis
+    """
+    mask = arr != 0
+    return np.where(mask.any(axis=axis), mask.argmax(axis=axis), invalid_val)
+
+
+def fast_detect_trj(
+        c_arr: np.ndarray,
+        dc: int,
+        dfr: int,
+        Nfr_min: int
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+
+            faster implementation of detect_trj function
+            LINKS POSITION DATA INTO TRAJECTORIES
+
+    :param c_arr: 3d numpy array; shape=(N=index_of_frame, n=index_of_particle, 2); N frames, each containing x-y
+                  coordinates of n particles
+    :param dc: int > 0; maximum distance from the detected particle to look for linked particles in other frames
+    :param dfr: int > 0; number of frames to look for linked particles
+    :param Nfr_min: int > 0; minimum number of frames in trajectory
+    :return:
+            t_trj_ids:
+            t_frames:
+            t_xy: 3d numpy array; shape=(N=index_of_frame, n=index_of_particle, 2=xy coordinate);
+            t_trj_num:
+    """
+    num_of_frames = c_arr.shape[0]
+    num_of_particles = c_arr.shape[1]
+    trj_num = c_arr.shape[1]
+
+    t_ids = np.zeros((num_of_frames, num_of_particles), dtype=int)
+    t_frames = np.zeros((num_of_frames, num_of_particles), dtype=int)
+
+    t_ids[0, :] = np.arange(num_of_particles)
+    t_frames[0, :] = np.zeros((num_of_particles))
+
+    minV = np.zeros((num_of_frames, num_of_particles, dfr))
+    indV = np.zeros((num_of_frames, num_of_particles, dfr), dtype=int)
+
+    r, c, h = np.indices((num_of_frames, num_of_particles, dfr))
+    minV[r == h] = -1  # frame + 1 - k <= 0; k in range(1, dfr)
+
+    start_ids = minV[:, :, 0] == 0
+    """ c_arr shape: (num_of_frames, num_of_particles, 2) """
+    """ minV, indV shape: (num_of_frames, num_of_particles, dfr) """
+    minV, indV = _precalc_minV_indV(minV, indV, c_arr, 1, dc, dfr, start_ids[1:, :])
+
+    # get matrice of indexes of the first non-zero elements of minV array along 2 axis and matrice of its values
+    frst_nonzero_id = _first_nonzero(minV, axis=2, invalid_val=-1)
+    values = np.squeeze(np.take_along_axis(minV, frst_nonzero_id[:, :, np.newaxis], 2))
+
+    t_ids = np.zeros((num_of_frames, num_of_particles), dtype=int)
+    t_ids[0, :] = np.arange(num_of_particles)
+    # set values for cases when frame + 1 - k <= 0 and k == dfr
+    t_ids[1:, :][np.where(np.logical_or(values[1:, :] == -1, values[1:, :] == 0))] = \
+        np.arange(num_of_particles, num_of_particles + (values[1:, :] == -1).sum() + (values[1:, :] == 0).sum())
+
+    t_frames[1:, :] = np.arange(1, num_of_frames)[:, np.newaxis] * np.ones(num_of_particles)
+
+    # set values for the last case
+    for fr_part in list(zip(*np.where(t_ids == 0))):
+        frame, particle = fr_part
+        m = minV[frame, particle, :]
+        k = frst_nonzero_id[frame, particle]
+        ind = indV[frame, particle, k]
+        mtx_temp = t_ids[frame - k - 1, ind]
+        t_ids[frame, particle] = mtx_temp
 
     # trajectory ids for all detected points
     trj_ids = np.sort(np.concatenate(t_ids, axis=0), axis=0)                      # (num_of_frames * num_of_particles, )

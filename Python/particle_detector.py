@@ -16,7 +16,7 @@ import time
 from typing import Callable, Tuple
 
 from local_gradient_math import local_gradient_alloc, get_position_brightfield, get_position_astigmatism, \
-     get_position_doublehelix, local_gradient_multi, detect_trj
+     get_position_doublehelix, local_gradient_multi, detect_trj, fast_detect_trj
 from validators import validate
 
 from multiprocessing import Pool, cpu_count
@@ -385,7 +385,7 @@ class ParticleDetector:
             local_gradient_multi, R=R, epsilon=epsilon, minpts=minpts, thrtype=thrtype, thr=thr
         )
         coord = cls._parallel(lgm_partial)(img_lst)
-        trj_id, frames, xy, trj_num = detect_trj(coord, dc=dc, dfr=dfr, Nfr_min=Nfr_min)
+        trj_id, frames, xy, trj_num = fast_detect_trj(coord, dc=dc, dfr=dfr, Nfr_min=Nfr_min)
 
         if draw_traject:
             cls._draw_trajectory(xy, fst_im)
